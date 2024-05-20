@@ -1,8 +1,14 @@
 const xlsx = require("xlsx");
+const { getAuthToken } = require("./vvFunctions/vvAuthToken");
+const { getCustomQuery } = require("./vvFunctions/vvGetCustomQuery");
 
 /* -------------------------------------------------------------------------- */
 /*                              GLOBAL VARIABLES                              */
 /* -------------------------------------------------------------------------- */
+
+const username = process.env.USER_ID;
+const password = process.env.PASSWORD;
+const queryGUID = "3d58019f-8cca-ee11-825a-a998606145c7";
 
 // Field type mapping dictionary
 const fieldTypeMapping = {
@@ -48,9 +54,8 @@ function getPageFields(form, pIndex) {
 /*                                MAIN FUNCTION                               */
 /* -------------------------------------------------------------------------- */
 
-function fixFields(form, desiredFieldTypes, formName) {
+async function getXMLFields(form, desiredFieldTypes, formName) {
     const fields = [];
-
     try {
         form.FormPages.forEach((page, pageIndex) => {
             const pageFields = getPageFields(form, pageIndex);
@@ -64,21 +69,37 @@ function fixFields(form, desiredFieldTypes, formName) {
                     fields.push({
                         name: fieldName,
                         type: fieldType,
-                        formName: formName
+                        formName: formName,
                     });
                 }
             });
         });
     } catch (error) {
-        console.log(error);
+        console.error(error);
     }
+
+    // Get the VV DB DATA TYPE values
+    const token = await getAuthToken(username, password);
+    const filter = `table_name=${formName}`;
+    const queryResult = await getCustomQuery(token, queryGUID, filter);
+console.log(queryResult);
+console.log(queryResult.meta.errors);
+    const dbDataTypeMap = {};
+    queryResult.forEach((row) => {
+        dbDataTypeMap[row.column_name] = row.data_type;
+    });
+
+    // Attach VV DB DATA TYPE to the fields
+    fields.forEach((field) => {
+        field.dbDataType = dbDataTypeMap[field.name] || "";
+    });
 
     return fields;
 }
 
 function generateExcelFile(excelFileName, fields) {
     const workbook = xlsx.utils.book_new();
-    const worksheetData = fields.map((field) => [field.formName, field.name, "", fieldTypeMapping[field.type] || field.type]);
+    const worksheetData = fields.map((field) => [field.formName, field.name, field.dbDataType, fieldTypeMapping[field.type] || field.type]);
 
     worksheetData.unshift(["VV TABLE NAME / RECORD TYPE", "VV FIELD NAME", "VV DB DATA TYPE", "VV FORM DATA TYPE"]);
 
@@ -87,5 +108,5 @@ function generateExcelFile(excelFileName, fields) {
     xlsx.writeFile(workbook, `./public/output/${excelFileName}.xlsx`);
 }
 
-module.exports = fixFields;
+module.exports.getXMLFields = getXMLFields;
 module.exports.generateExcelFile = generateExcelFile;

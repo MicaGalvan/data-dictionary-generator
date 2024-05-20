@@ -2,7 +2,8 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const xml2js = require("xml2js");
-const fixFields = require("./fieldFixers");
+const getXMLFields = require("./generateExcelFile").getXMLFields;
+const generateExcelFile = require("./generateExcelFile").generateExcelFile;
 
 /* -------------------------------------------------------------------------- */
 /*                              CONFIG VARIABLES                              */
@@ -19,9 +20,9 @@ const outputExcelName = process.env.OUTPUT_EXCEL_NAME;
 /*                                FILE HANDLING                               */
 /* -------------------------------------------------------------------------- */
 
-function getAllXMLFilePaths(path) {
+function getXmlFilePaths(directory) {
     return new Promise((resolve, reject) => {
-        fs.readdir(path, (err, files) => {
+        fs.readdir(directory, (err, files) => {
             if (err) {
                 reject(err);
                 return;
@@ -33,9 +34,9 @@ function getAllXMLFilePaths(path) {
     });
 }
 
-function readXmlFile(inputXmlPath) {
+function readXmlFile(filePath) {
     return new Promise((resolve, reject) => {
-        fs.readFile(inputXmlPath, "utf-8", (err, data) => {
+        fs.readFile(filePath, "utf-8", (err, data) => {
             if (err) {
                 reject(err);
                 return;
@@ -45,9 +46,9 @@ function readXmlFile(inputXmlPath) {
     });
 }
 
-function convertXmlToJson(data) {
+function parseXmlToJson(xmlData) {
     return new Promise((resolve, reject) => {
-        xml2js.parseString(data, (err, result) => {
+        xml2js.parseString(xmlData, (err, result) => {
             if (err) {
                 reject(err);
                 return;
@@ -57,14 +58,14 @@ function convertXmlToJson(data) {
     });
 }
 
-async function processXmlFile(filePath) {
-    const data = await readXmlFile(path.join(inputXmlFolderPath, filePath));
-    const fileName = path.basename(filePath, ".xml");
-    const jsonData = await convertXmlToJson(data);
+async function handleXmlFile(filePath) {
+    const xmlData = await readXmlFile(path.join(inputXmlFolderPath, filePath));
+    const formName = path.basename(filePath, ".xml");
+    const jsonData = await parseXmlToJson(xmlData);
     const formEntity = jsonData.FormEntity;
 
-    // Extract fields using fixFields function
-    return fixFields(formEntity, desiredFieldTypes, fileName);
+    // Extract fields using getXMLFields function
+    return await getXMLFields(formEntity, desiredFieldTypes, formName);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -73,17 +74,17 @@ async function processXmlFile(filePath) {
 
 async function main() {
     try {
-        const filePaths = await getAllXMLFilePaths(inputXmlFolderPath);
+        const xmlFilePaths = await getXmlFilePaths(inputXmlFolderPath);
         const allFields = [];
 
-        for (const filePath of filePaths) {
+        for (const filePath of xmlFilePaths) {
             // eslint-disable-next-line no-await-in-loop
-            const fields = await processXmlFile(filePath);
+            const fields = await handleXmlFile(filePath);
             allFields.push(...fields);
         }
 
         // Generate the Excel file with all accumulated fields
-        fixFields.generateExcelFile(outputExcelName, allFields);
+        generateExcelFile(outputExcelName, allFields);
 
         console.log("All files have been processed!");
     } catch (error) {

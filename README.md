@@ -61,3 +61,32 @@ Before running the application, make sure to configure the .env file with your c
 2. Place all the xml files in the input path `/public/input`.
 3. Open your terminal or command prompt and navigate to the directory where your project is located.
 4. Once you are in the project directory, run the command `npm start`.
+
+## ❗To take in to account:
+1. The XML file name should be the same as the form name in VV.
+2. Field types map for the `DESIRED_FIELD_TYPES` configuration variable:
+
+    | XML FIELD TYPE      | FORM FIELD TYPE
+    | ------------------- | -------------------------
+    | FieldContainer      | Container
+    | FieldCheckbox       | Checkbox Control
+    | ImageFormControl    | Image Control
+    | FieldLabel          | Label Control
+    | FieldTextbox3       | Textbox Control
+    | FormButton          | Form Button Control
+    | FieldDropDownList3  | DropDownList Control
+    | FieldTextArea3      | Multiline Textbox Control
+    | CellField           | Cell Field Control
+    | FieldCalendar3      | Calendar Control
+    | UploadButton        | Upload Button Control
+    | FormIDStamp         | Form ID Stamp Control
+    | RepeatingRowControl | Repeating Row Control
+    | FieldDataGrid       | Data Grid Control
+    | UserIDStamp         | Signature Stamp Control
+    | QuestionsControl    | Question Control
+    | SumField            | Sum Field Control
+    | FieldRectangle      | Rectangle
+    | FieldCommentList    | Conversation
+    | FieldSlider         | Slider Control
+    | BarCodeFormControl  | Barcode Image
+

@@ -8,7 +8,7 @@ const { getCustomQuery } = require("./vvFunctions/vvGetCustomQuery");
 
 const username = process.env.USER_ID;
 const password = process.env.PASSWORD;
-const queryGUID = "3d58019f-8cca-ee11-825a-a998606145c7";
+const queryGUID = process.env.QUERY_GUID;
 
 // Field type mapping dictionary
 const fieldTypeMapping = {
@@ -75,17 +75,21 @@ async function getXMLFields(form, desiredFieldTypes, formName) {
             });
         });
     } catch (error) {
-        console.error(error);
+        console.log(error);
     }
 
     // Get the VV DB DATA TYPE values
     const token = await getAuthToken(username, password);
-    const filter = `table_name=${formName}`;
+    const filter = JSON.stringify([
+        {
+            parameterName: "tableName",
+            value: formName,
+        },
+    ]);
+
     const queryResult = await getCustomQuery(token, queryGUID, filter);
-console.log(queryResult);
-console.log(queryResult.meta.errors);
     const dbDataTypeMap = {};
-    queryResult.forEach((row) => {
+    queryResult.data.forEach((row) => {
         dbDataTypeMap[row.column_name] = row.data_type;
     });
 

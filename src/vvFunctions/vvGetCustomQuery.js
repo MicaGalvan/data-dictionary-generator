@@ -4,9 +4,7 @@ async function getCustomQuery(token, queryGUID, filter) {
     const baseURL = process.env.BASE_URL;
     const encodedQueryName = encodeURIComponent(queryGUID);
     const encodedFilter = encodeURIComponent(filter);
-    console.log(encodedFilter);
-    const url = `${baseURL}/customquery/${encodedQueryName}?filter=${encodedFilter}`;
-    console.log(encodedFilter);
+    const url = `${baseURL}/customquery/${encodedQueryName}?params=${encodedFilter}`;
     try {
         const response = await axios.get(url, {
             headers: {

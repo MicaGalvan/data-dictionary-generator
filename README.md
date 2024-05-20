@@ -1,4 +1,4 @@
-# VisualVault XML Fixer
+# VisualVault Data Dictionary Generator
 
 This project is a utility tool designed to automate the process of creating the Data Dictionary from VV Forms.
 <br/><br/>

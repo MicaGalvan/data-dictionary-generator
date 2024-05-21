@@ -105,7 +105,7 @@ function generateExcelFile(excelFileName, fields) {
     const workbook = xlsx.utils.book_new();
     const worksheetData = fields.map((field) => [field.formName, field.name, field.dbDataType, fieldTypeMapping[field.type] || field.type]);
 
-    worksheetData.unshift(["VV TABLE NAME / RECORD TYPE", "VV FIELD NAME", "VV DB DATA TYPE", "VV FORM DATA TYPE"]);
+    worksheetData.unshift(["VV TABLE NAME / RECORD TYPE", "VV FIELD NAME", "VV DB DATA TYPE", "VV FORM DATA TYPE", "VV META DATA"]);
 
     const worksheet = xlsx.utils.aoa_to_sheet(worksheetData);
     xlsx.utils.book_append_sheet(workbook, worksheet, "Data Dictionary");

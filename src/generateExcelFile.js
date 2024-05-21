@@ -134,7 +134,7 @@ function generateExcelFile(excelFileName, fields) {
         field.formName,
         field.name,
         field.dbDataType,
-        field.type,
+        fieldTypeMapping[field.type] || "",
         field.isMetaData || "No", // Adding metadata information
     ]);
 

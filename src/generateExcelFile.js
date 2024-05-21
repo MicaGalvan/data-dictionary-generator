@@ -56,20 +56,34 @@ function getPageFields(form, pIndex) {
 
 async function getXMLFields(form, desiredFieldTypes, formName) {
     const fields = [];
+    let lastContainerId = null;
+
     try {
+        // Find the last container ID
+        form.FormPages.forEach((page) => {
+            const pageFields = page.FormPage[0].FieldList[0].BaseField;
+            pageFields.forEach((field) => {
+                if (field.$["xsi:type"] === "FieldContainer") {
+                    lastContainerId = field.ID[0];
+                }
+            });
+        });
+
+        // Iterate over each field and check if it's within the last container
         form.FormPages.forEach((page, pageIndex) => {
             const pageFields = getPageFields(form, pageIndex);
 
-            // Iterate over each field in the page
             pageFields.forEach((field, fieldIndex) => {
                 const fieldType = field.$["xsi:type"];
                 const fieldName = getFieldName(form, pageIndex, fieldIndex);
+                const isMetaData = (field.ContainerId && field.ContainerId[0] === lastContainerId) ? "Yes" : "No";
 
                 if (desiredFieldTypes.length === 0 || desiredFieldTypes.includes(fieldType)) {
                     fields.push({
                         name: fieldName,
                         type: fieldType,
                         formName: formName,
+                        isMetaData: isMetaData
                     });
                 }
             });
@@ -103,7 +117,9 @@ async function getXMLFields(form, desiredFieldTypes, formName) {
 
 function generateExcelFile(excelFileName, fields) {
     const workbook = xlsx.utils.book_new();
-    const worksheetData = fields.map((field) => [field.formName, field.name, field.dbDataType, fieldTypeMapping[field.type] || field.type]);
+    const worksheetData = fields.map((field) => [
+        field.formName, field.name, field.dbDataType, fieldTypeMapping[field.type] || field.type, field.isMetaData
+    ]);
 
     worksheetData.unshift(["VV TABLE NAME / RECORD TYPE", "VV FIELD NAME", "VV DB DATA TYPE", "VV FORM DATA TYPE", "VV META DATA"]);
 

@@ -37,7 +37,7 @@ function compareExcelFiles(excelAPath, excelBPath, outputExcelPath) {
     const excelBData = readExcelFile(excelBPath);
 
     const differences = [];
-    const headers = ["VV TABLE NAME / RECORD TYPE", "VV FIELD NAME", "VV DB DATA TYPE", "VV FORM DATA TYPE", "VV META DATA", "Source"];
+    const headers = ["VV TABLE NAME / RECORD TYPE", "VV FIELD NAME", "VV DB DATA TYPE", "VV FORM DATA TYPE", "VV META DATA", "SOURCE"];
 
     differences.push(headers);
 
@@ -62,7 +62,7 @@ function compareExcelFiles(excelAPath, excelBPath, outputExcelPath) {
             differences.push([...row, "Excel A"]);
         } else {
             const rowB = dataMapB.get(key);
-            if (row[2] !== rowB[2] || row[3] !== rowB[3]) {
+            if (row[2] !== rowB[2] || row[3] !== rowB[3] || row[4] !== rowB[4]) {
                 differences.push([...row, "Excel A"]);
                 differences.push([...rowB, "Excel B"]);
             }

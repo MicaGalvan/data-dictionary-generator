@@ -73,17 +73,18 @@ async function getXMLFields(form, desiredFieldTypes, formName) {
         form.FormPages.forEach((page, pageIndex) => {
             const pageFields = getPageFields(form, pageIndex);
 
+            // Iterate over each field in the page
             pageFields.forEach((field, fieldIndex) => {
                 const fieldType = field.$["xsi:type"];
                 const fieldName = getFieldName(form, pageIndex, fieldIndex);
-                const isMetaData = (field.ContainerId && field.ContainerId[0] === lastContainerId) ? "Yes" : "No";
+                const isMetaData = field.ContainerId && field.ContainerId[0] === lastContainerId ? "Yes" : "No";
 
                 if (desiredFieldTypes.length === 0 || desiredFieldTypes.includes(fieldType)) {
                     fields.push({
                         name: fieldName,
                         type: fieldType,
                         formName: formName,
-                        isMetaData: isMetaData
+                        isMetaData: isMetaData,
                     });
                 }
             });
@@ -107,10 +108,22 @@ async function getXMLFields(form, desiredFieldTypes, formName) {
         dbDataTypeMap[row.column_name] = row.data_type;
     });
 
-    // Attach VV DB DATA TYPE to the fields
+    // Attach VV DB DATA TYPE and other fields to the fields
     fields.forEach((field) => {
         field.dbDataType = dbDataTypeMap[field.name] || "";
     });
+
+    // Add extra fields to the fields array
+    fields.push(
+        { name: "DhDocID", type: "", formName: formName, dbDataType: dbDataTypeMap["DhDocID"] || "", isMetaData: "Yes" },
+        { name: "DhID", type: "", formName: formName, dbDataType: dbDataTypeMap["DhID"] || "", isMetaData: "Yes" },
+        { name: "VVCreateDate", type: "", formName: formName, dbDataType: dbDataTypeMap["VVCreateDate"] || "", isMetaData: "Yes" },
+        { name: "VVCreateBy", type: "", formName: formName, dbDataType: dbDataTypeMap["VVCreateBy"] || "", isMetaData: "Yes" },
+        { name: "VVModifyDate", type: "", formName: formName, dbDataType: dbDataTypeMap["VVModifyDate"] || "", isMetaData: "Yes" },
+        { name: "VVModifyBy", type: "", formName: formName, dbDataType: dbDataTypeMap["VVModifyBy"] || "", isMetaData: "Yes" },
+        { name: "VVCreateByUsID", type: "", formName: formName, dbDataType: dbDataTypeMap["VVCreateByUsID"] || "", isMetaData: "Yes" },
+        { name: "VVModifyByUsID", type: "", formName: formName, dbDataType: dbDataTypeMap["VVModifyByUsID"] || "", isMetaData: "Yes" },
+    );
 
     return fields;
 }
@@ -118,7 +131,11 @@ async function getXMLFields(form, desiredFieldTypes, formName) {
 function generateExcelFile(excelFileName, fields) {
     const workbook = xlsx.utils.book_new();
     const worksheetData = fields.map((field) => [
-        field.formName, field.name, field.dbDataType, fieldTypeMapping[field.type] || field.type, field.isMetaData
+        field.formName,
+        field.name,
+        field.dbDataType,
+        field.type,
+        field.isMetaData || "No", // Adding metadata information
     ]);
 
     worksheetData.unshift(["VV TABLE NAME / RECORD TYPE", "VV FIELD NAME", "VV DB DATA TYPE", "VV FORM DATA TYPE", "VV META DATA"]);

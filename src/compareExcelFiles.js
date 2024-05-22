@@ -1,19 +1,7 @@
 require("dotenv").config();
 const xlsx = require("xlsx");
 
-/* -------------------------------------------------------------------------- */
-/*                              CONFIG VARIABLES                              */
-/* -------------------------------------------------------------------------- */
-
 const outputExcelName = process.env.OUTPUT_EXCEL_NAME;
-// Paths to your Excel files
-const excelAPath = `./public/output/${outputExcelName}.xlsx`;
-const excelBPath = `./public/dataDictionary/${outputExcelName}.xlsx`;
-const outputExcelPath = "./public/output/differences.xlsx";
-
-/* -------------------------------------------------------------------------- */
-/*                              HELPER FUNCTIONS                              */
-/* -------------------------------------------------------------------------- */
 
 // Helper function to read Excel file and convert to JSON
 function readExcelFile(filePath) {
@@ -37,52 +25,67 @@ function compareExcelFiles(excelAPath, excelBPath, outputExcelPath) {
     const excelBData = readExcelFile(excelBPath);
 
     const differences = [];
-    const headers = ["VV TABLE NAME / RECORD TYPE", "VV FIELD NAME", "VV DB DATA TYPE", "VV FORM DATA TYPE", "VV META DATA", "SOURCE"];
+    const headers = ["VV TABLE NAME / RECORD TYPE", "VV FIELD NAME", "VV DB DATA TYPE", "VV FORM DATA TYPE", "VV META DATA", "DIFFERENCE"];
 
     differences.push(headers);
 
-    const dataMapA = new Map();
-    const dataMapB = new Map();
+    const dataMapNewDictionary = new Map();
+    const dataMapOriginalDictionary = new Map();
 
-    // Map data from Excel A
+    // Map data from New Dictionary file
     excelAData.slice(1).forEach((row) => {
-        const key = `${row[0]}|${row[1]}`;
-        dataMapA.set(key, row);
+        const key = `${row[1]}`; // Use "VV FIELD NAME" as the unique key
+        dataMapNewDictionary.set(key, row);
     });
 
-    // Map data from Excel B
+    // Map data from Original Dictionary file
     excelBData.slice(1).forEach((row) => {
-        const key = `${row[0]}|${row[1]}`;
-        dataMapB.set(key, row);
+        const key = `${row[1]}`; // Use "VV FIELD NAME" as the unique key
+        dataMapOriginalDictionary.set(key, row);
     });
 
-    // Compare Excel A to Excel B
-    dataMapA.forEach((row, key) => {
-        if (!dataMapB.has(key)) {
-            differences.push([...row, "Excel A"]);
+    // Compare New Dictionary file to Original Dictionary file
+    dataMapNewDictionary.forEach((newDictionary, key) => {
+        if (!dataMapOriginalDictionary.has(key)) {
+            differences.push([...newDictionary, "New field"]);
         } else {
-            const rowB = dataMapB.get(key);
-            if (row[2] !== rowB[2] || row[3] !== rowB[3] || row[4] !== rowB[4]) {
-                differences.push([...row, "Excel A"]);
-                differences.push([...rowB, "Excel B"]);
+            const originalDictionary = dataMapOriginalDictionary.get(key);
+            let differenceDescription = "";
+
+            if (newDictionary[1] !== originalDictionary[1]) {
+                differenceDescription += `VV FIELD NAME changed from '${originalDictionary[1]}' to '${newDictionary[1]}'. `;
+            }
+            if (newDictionary[2].trim().toLowerCase() !== originalDictionary[2].trim().toLowerCase()) {
+                differenceDescription += `VV DB DATA TYPE changed from '${originalDictionary[2]}' to '${newDictionary[2]}'. `;
+            }
+            if (newDictionary[3] != "" && newDictionary[3].trim().toLowerCase() !== originalDictionary[3].trim().toLowerCase()) {
+                differenceDescription += `VV FORM DATA TYPE changed from '${originalDictionary[3]}' to '${newDictionary[3]}'. `;
+            }
+            if (newDictionary[4].trim().toLowerCase() !== originalDictionary[4].trim().toLowerCase()) {
+                differenceDescription += `VV META DATA changed from '${originalDictionary[4]}' to '${newDictionary[4]}'. `;
+            }
+
+            if (differenceDescription) {
+                differences.push([...newDictionary, differenceDescription]);
             }
         }
     });
 
-    // Compare Excel B to Excel A
-    dataMapB.forEach((row, key) => {
-        if (!dataMapA.has(key)) {
-            differences.push([...row, "Excel B"]);
+    // Compare Original Dictionary to New Dictionary to find removed fields
+    dataMapOriginalDictionary.forEach((row, key) => {
+        if (!dataMapNewDictionary.has(key)) {
+            differences.push([...row, "Removed field"]);
         }
     });
 
-    // Write differences to Excel C
+    // Write differences to new Excel file.
     writeExcelFile(outputExcelPath, differences);
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                    MAIN                                    */
-/* -------------------------------------------------------------------------- */
+// Paths to your Excel files
+const excelAPath = `./public/output/${outputExcelName}.xlsx`;
+const excelBPath = `public/dataDictionary/${outputExcelName}.xlsx`;
+const outputExcelPath = "public/output/differences.xlsx";
 
 // Perform the comparison
 compareExcelFiles(excelAPath, excelBPath, outputExcelPath);

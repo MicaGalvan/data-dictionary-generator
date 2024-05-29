@@ -39,15 +39,12 @@ const fieldTypeMapping = {
 /*                              HELPER FUNCTIONS                              */
 /* -------------------------------------------------------------------------- */
 
-function getFieldName(form, pIndex, fieldIndex) {
-    const fields = getPageFields(form, pIndex);
-    const field = fields[fieldIndex];
-    const fieldName = field.Name[0];
-    return fieldName;
+function getFieldName(field) {
+    return field.Name[0];
 }
 
-function getPageFields(form, pIndex) {
-    return form.FormPages[pIndex].FormPage[0].FieldList[0].BaseField;
+function getPageFields(page) {
+    return page.FormPage[0].FieldList[0].BaseField;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -59,24 +56,16 @@ async function getXMLFields(form, desiredFieldTypes, formName) {
     let lastContainerId = null;
 
     try {
-        // Find the last container ID
-        form.FormPages.forEach((page) => {
-            const pageFields = page.FormPage[0].FieldList[0].BaseField;
-            pageFields.forEach((field) => {
-                if (field.$["xsi:type"] === "FieldContainer") {
+        // Use a single pass to find the last container ID and collect all fields
+        form.FormPages.map((page) => {
+            getPageFields(page).map((field) => {
+                const fieldType = field.$["xsi:type"];
+                const fieldName = getFieldName(field);
+
+                if (fieldType === "FieldContainer") {
                     lastContainerId = field.ID[0];
                 }
-            });
-        });
 
-        // Iterate over each field and check if it's within the last container
-        form.FormPages.forEach((page, pageIndex) => {
-            const pageFields = getPageFields(form, pageIndex);
-
-            // Iterate over each field in the page
-            pageFields.forEach((field, fieldIndex) => {
-                const fieldType = field.$["xsi:type"];
-                const fieldName = getFieldName(form, pageIndex, fieldIndex);
                 const isMetaData = field.ContainerId && field.ContainerId[0] === lastContainerId ? "Yes" : "No";
 
                 if (desiredFieldTypes.length === 0 || desiredFieldTypes.includes(fieldType)) {
@@ -90,40 +79,31 @@ async function getXMLFields(form, desiredFieldTypes, formName) {
             });
         });
     } catch (error) {
-        console.log(error);
+        console.error("Error processing form pages:", error);
     }
 
     // Get the VV DB DATA TYPE values
     const token = await getAuthToken(username, password);
-    const filter = JSON.stringify([
-        {
-            parameterName: "tableName",
-            value: formName,
-        },
-    ]);
-
+    const filter = JSON.stringify([{ parameterName: "tableName", value: formName }]);
     const queryResult = await getCustomQuery(token, queryGUID, filter);
-    const dbDataTypeMap = {};
-    queryResult.data.forEach((row) => {
-        dbDataTypeMap[row.column_name] = row.data_type;
-    });
+    const dbDataTypeMap = new Map(queryResult.data.map((row) => [row.column_name, row.data_type]));
 
     // Attach VV DB DATA TYPE and other fields to the fields
-    fields.forEach((field) => {
-        field.dbDataType = dbDataTypeMap[field.name] || "";
+    fields.map((field) => {
+        field.dbDataType = dbDataTypeMap.get(field.name) || "";
     });
 
     // Add extra fields to the fields array
-    fields.push(
-        { name: "DhDocID", type: "", formName: formName, dbDataType: dbDataTypeMap["DhDocID"] || "", isMetaData: "Yes" },
-        { name: "DhID", type: "", formName: formName, dbDataType: dbDataTypeMap["DhID"] || "", isMetaData: "Yes" },
-        { name: "VVCreateDate", type: "", formName: formName, dbDataType: dbDataTypeMap["VVCreateDate"] || "", isMetaData: "Yes" },
-        { name: "VVCreateBy", type: "", formName: formName, dbDataType: dbDataTypeMap["VVCreateBy"] || "", isMetaData: "Yes" },
-        { name: "VVModifyDate", type: "", formName: formName, dbDataType: dbDataTypeMap["VVModifyDate"] || "", isMetaData: "Yes" },
-        { name: "VVModifyBy", type: "", formName: formName, dbDataType: dbDataTypeMap["VVModifyBy"] || "", isMetaData: "Yes" },
-        { name: "VVCreateByUsID", type: "", formName: formName, dbDataType: dbDataTypeMap["VVCreateByUsID"] || "", isMetaData: "Yes" },
-        { name: "VVModifyByUsID", type: "", formName: formName, dbDataType: dbDataTypeMap["VVModifyByUsID"] || "", isMetaData: "Yes" },
-    );
+    const extraFields = ["DhDocID", "DhID", "VVCreateDate", "VVCreateBy", "VVModifyDate", "VVModifyBy", "VVCreateByUsID", "VVModifyByUsID"];
+    extraFields.map((extraField) => {
+        fields.push({
+            name: extraField,
+            type: "",
+            formName: formName,
+            dbDataType: dbDataTypeMap.get(extraField) || "",
+            isMetaData: "Yes",
+        });
+    });
 
     return fields;
 }

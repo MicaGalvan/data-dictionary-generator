@@ -19,6 +19,11 @@ function writeExcelFile(filePath, data) {
     xlsx.writeFile(workbook, filePath);
 }
 
+// Normalize string for comparison
+function normalizeString(str) {
+    return str ? str.trim().toLowerCase() : "";
+}
+
 // Function to compare two Excel files and get differences
 function compareExcelFiles(excelAPath, excelBPath, outputExcelPath) {
     const excelAData = readExcelFile(excelAPath);
@@ -32,15 +37,20 @@ function compareExcelFiles(excelAPath, excelBPath, outputExcelPath) {
     const dataMapNewDictionary = new Map();
     const dataMapOriginalDictionary = new Map();
 
+    // Create composite key for mapping data
+    const createCompositeKey = (row) => {
+        return `${normalizeString(row[0])}:${normalizeString(row[1])}`; // Use "VV TABLE NAME / RECORD TYPE" and "VV FIELD NAME" as the composite key
+    };
+
     // Map data from New Dictionary file
     excelAData.slice(1).forEach((row) => {
-        const key = `${row[1]}`; // Use "VV FIELD NAME" as the unique key
+        const key = createCompositeKey(row);
         dataMapNewDictionary.set(key, row);
     });
 
     // Map data from Original Dictionary file
     excelBData.slice(1).forEach((row) => {
-        const key = `${row[1]}`; // Use "VV FIELD NAME" as the unique key
+        const key = createCompositeKey(row);
         dataMapOriginalDictionary.set(key, row);
     });
 
@@ -52,21 +62,25 @@ function compareExcelFiles(excelAPath, excelBPath, outputExcelPath) {
             const originalDictionary = dataMapOriginalDictionary.get(key);
             let differenceDescription = "";
 
-            if (newDictionary[1] !== originalDictionary[1]) {
+            // Compare VV FIELD NAME
+            if (normalizeString(newDictionary[1]) !== normalizeString(originalDictionary[1])) {
                 differenceDescription += `VV FIELD NAME changed from '${originalDictionary[1]}' to '${newDictionary[1]}'. `;
             }
-            if (newDictionary[2].trim().toLowerCase() !== originalDictionary[2].trim().toLowerCase()) {
+            // Compare VV DB DATA TYPE
+            if (normalizeString(newDictionary[2]) !== normalizeString(originalDictionary[2])) {
                 differenceDescription += `VV DB DATA TYPE changed from '${originalDictionary[2]}' to '${newDictionary[2]}'. `;
             }
-            if (newDictionary[3] != "" && newDictionary[3].trim().toLowerCase() !== originalDictionary[3].trim().toLowerCase()) {
+            // Compare VV FORM DATA TYPE
+            if (newDictionary[3] && normalizeString(newDictionary[3]) !== normalizeString(originalDictionary[3])) {
                 differenceDescription += `VV FORM DATA TYPE changed from '${originalDictionary[3]}' to '${newDictionary[3]}'. `;
             }
-            if (newDictionary[4].trim().toLowerCase() !== originalDictionary[4].trim().toLowerCase()) {
+            // Compare VV META DATA
+            if (normalizeString(newDictionary[4]) !== normalizeString(originalDictionary[4])) {
                 differenceDescription += `VV META DATA changed from '${originalDictionary[4]}' to '${newDictionary[4]}'. `;
             }
 
             if (differenceDescription) {
-                differences.push([...newDictionary, differenceDescription]);
+                differences.push([...newDictionary, differenceDescription.trim()]);
             }
         }
     });
